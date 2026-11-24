@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "name": "lido-vk-ai-agent",
+  "builds": [
+    { "src": "public/**", "use": "@vercel/static" },
+    { "src": "api/app.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/app.js" },
+    { "src": "/api", "dest": "/api/app.js" },
+    { "src": "/webhook/vk", "dest": "/api/app.js" },
+    { "src": "/health", "dest": "/api/app.js" },
+    { "src": "/", "dest": "/public/index.html" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ],
+  "github": {
+    "enabled": true,
+    "silent": true
+  }
+}

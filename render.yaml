@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: lido-backend
+    env: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    disk:
+      name: lido-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /app/data
+      - key: AI_PROVIDER
+        value: gigachat
+      - key: GIGACHAT_MODEL
+        value: GigaChat
+      - key: GIGACHAT_SCOPE
+        value: GIGACHAT_API_PERS
+      - key: GIGACHAT_TLS_INSECURE
+        value: "1"
+      - key: GIGACHAT_CLIENT_ID
+        sync: false
+      - key: GIGACHAT_CLIENT_SECRET
+        sync: false
+      - key: YANDEX_FOLDER_ID
+        sync: false
+      - key: YANDEX_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: VK_GROUP_TOKEN
+        sync: false
+      - key: VK_GROUP_ID
+        sync: false
+      - key: VK_SECRET
+        sync: false
+      - key: VK_CONFIRMATION_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

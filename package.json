@@ -1,0 +1,19 @@
+{
+  "name": "lido-vk-ai-agent",
+  "version": "1.0.0",
+  "description": "Лидо — ИИ-агент для ВКонтакте, который доводит диалог до номера телефона",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check server/index.js && node --check public/app.js",
+    "build:standalone": "node build-standalone.mjs",
+    "vercel-build": "node -e \"process.stdout.write('No build step required\\n')\""
+  },
+  "dependencies": {}
+}
