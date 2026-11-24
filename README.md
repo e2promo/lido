@@ -234,17 +234,17 @@ node server/index.js
 
 ### Публикация на GitHub + Vercel (полностью в облаке)
 
-**Архитектура.** Всё работает внутри Vercel. Serverless-функция на каждом запросе восстанавливает SQLite-файлы из **Vercel KV** (Upstash Redis) во временную папку `/tmp`, выполняет обычный бэкенд и сохраняет изменения обратно в KV. Клиенты заходят только на ваш `*.vercel.app` — отдельный сервер не нужен.
+**Архитектура.** Всё работает внутри Vercel. Serverless-функция на каждом запросе восстанавливает SQLite-файлы из внешнего хранилища во временную папку `/tmp`, выполняет обычный бэкенд и сохраняет изменения обратно. Хранилищем может быть **Neon Postgres** (бесплатный тариф) или **Vercel KV / Upstash Redis**. Клиенты заходят только на ваш `*.vercel.app` — отдельный сервер не нужен.
 
 ```
 Браузер клиента → Vercel: статика + /api/* и /webhook/vk (serverless)
                        ↓ снимки SQLite
-                 Vercel KV (Upstash Redis)
+        Neon Postgres (NEON_DATABASE_URL) или Vercel KV (Upstash)
                        ↓
                  VK API / GigaChat / Telegram
 ```
 
-Для защиты от одновременного изменения базы используется короткая блокировка в KV.
+Для защиты от одновременного изменения базы используется короткая блокировка в хранилище.
 
 **1. GitHub**
 
@@ -260,10 +260,18 @@ git push -u origin main
 
 `.env`, `data/` и ключи в репозиторий не попадают (`.gitignore`). В архиве есть `LICENSE`, `SECURITY.md`, CI и все конфиги deployment.
 
-**2. Vercel KV (база)**
+**2. База (достаточно одного варианта, у обоих есть бесплатный тариф)**
 
-1. В панели Vercel: **Storage → Create Database → KV (Upstash)** → создайте хранилище и подключите его к проекту.
-2. Vercel автоматически добавит переменные `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN` — хендлер понимает их (и алиасы `KV_REST_API_*`).
+*Вариант А — Neon Postgres (бесплатно):*
+1. Создайте проект и базу в Neon, выберите Free tier.
+2. В **Connection Details** скопируйте Connection String вида `postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`.
+3. Добавьте его в Vercel как переменную `NEON_DATABASE_URL`. Хендлер сам создаст таблицы `lido_snapshots` и `lido_locks` и будет хранить снимки SQLite в Postgres через HTTP SQL API.
+
+*Вариант Б — Vercel KV (Upstash):*
+1. Vercel → **Storage → Create Database → KV (Upstash)** → создайте и подключите к проекту.
+2. Vercel автоматически добавит `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN` (поддерживаются и алиасы `KV_REST_API_*`).
+
+Если заданы обе переменные, приоритет у `NEON_DATABASE_URL`.
 
 **3. Vercel (проект)**
 
@@ -282,9 +290,9 @@ git push -u origin main
 
 - `https://<vercel>/health` → `{"ok":true,...}`;
 - `https://<vercel>/api/templates` → 9 шаблонов;
-- создание компании → её диалоги сохраняются после перезапуска функции (проверено: снимки в KV переживают «холодный старт»).
+- создание компании → её диалоги сохраняются после перезапуска функции (снимки хранятся в Neon/KV и переживают «холодный старт»).
 
-Ограничения: бесплатный KV имеет лимиты на размер и трафик; при высокой нагрузке замените KV на управляемую БД (Turso/Postgres) или вынесите бэкенд на постоянный сервер. Для локальной разработки `lido-deploy.zip` по-прежнему запускается через `node server/index.js`.
+Ограничения: бесплатные тарифы Neon и KV имеют лимиты на размер и трафик; при высокой нагрузке вынесите бэкенд на постоянный сервер или используйте платный план. Для локальной разработки `lido-deploy.zip` по-прежнему запускается через `node server/index.js`.
 
 ### HTML-версия без сервера
 

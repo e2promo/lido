@@ -1,51 +1,34 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { storage, storageMode } from './storage.js';
 
-const REST_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '';
-const REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
 const DATA_DIR = '/tmp/lido-data';
 const PREFIX = 'lido:db:';
 const LOCK_KEY = 'lido:lock';
-
-async function redis(...command) {
-  if (!REST_URL || !REST_TOKEN) throw new Error('Vercel KV не настроен');
-  const res = await fetch(REST_URL, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${REST_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(command),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data.result;
-}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function acquireLock(value) {
   for (let i = 0; i < 25; i++) {
-    const result = await redis('SET', LOCK_KEY, value, 'NX', 'EX', 30);
-    if (result === 'OK') return true;
+    if (await storage().lock(LOCK_KEY, value, 30)) return true;
     await sleep(150);
   }
   return false;
 }
 
 async function releaseLock(value) {
-  try {
-    await redis('EVAL',
-      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
-      1, LOCK_KEY, value);
-  } catch { /* блокировка снимется по TTL */ }
+  try { await storage().unlock(LOCK_KEY, value); }
+  catch { /* блокировка снимется по TTL */ }
 }
 
 async function loadDatabases() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const keys = await redis('KEYS', PREFIX + '*') || [];
+  const keys = await storage().keys(PREFIX) || [];
   for (const key of keys) {
     const name = path.basename(key.slice(PREFIX.length));
     if (!/\.db(-wal|-shm)?$/.test(name)) continue;
-    const stored = await redis('GET', key);
+    const stored = await storage().get(key);
     if (stored !== null && stored !== undefined) {
       fs.writeFileSync(path.join(DATA_DIR, name), Buffer.from(stored || '', 'base64'));
     }
@@ -57,7 +40,7 @@ async function saveDatabases() {
   for (const name of fs.readdirSync(DATA_DIR)) {
     if (!/\.db(-wal|-shm)?$/.test(name)) continue;
     const encoded = fs.readFileSync(path.join(DATA_DIR, name)).toString('base64');
-    await redis('SET', PREFIX + path.basename(name), encoded, 'EX', 60 * 60 * 24 * 365);
+    await storage().set(PREFIX + path.basename(name), encoded);
   }
 }
 
@@ -105,8 +88,11 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  if (!REST_URL || !REST_TOKEN) {
-    return res.status(503).json({ error: 'Vercel KV не подключён', detail: 'Добавьте UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN в Environment Variables.' });
+  if (!storageMode()) {
+    return res.status(503).json({
+      error: 'Хранилище не подключено',
+      detail: 'Добавьте NEON_DATABASE_URL (Neon Postgres) или UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN в Environment Variables.',
+    });
   }
 
   const lockValue = crypto.randomUUID();
