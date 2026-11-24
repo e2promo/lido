@@ -91,7 +91,7 @@ export default async function handler(req, res) {
   if (!storageMode()) {
     return res.status(503).json({
       error: 'Хранилище не подключено',
-      detail: 'Добавьте NEON_DATABASE_URL (Neon Postgres) или UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN в Environment Variables.',
+      detail: 'Добавьте SUPABASE_URL и SUPABASE_SERVICE_KEY (или NEON_DATABASE_URL, или UPSTASH_REDIS_REST_URL/TOKEN) в Environment Variables.',
     });
   }
 

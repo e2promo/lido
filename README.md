@@ -234,12 +234,12 @@ node server/index.js
 
 ### Публикация на GitHub + Vercel (полностью в облаке)
 
-**Архитектура.** Всё работает внутри Vercel. Serverless-функция на каждом запросе восстанавливает SQLite-файлы из внешнего хранилища во временную папку `/tmp`, выполняет обычный бэкенд и сохраняет изменения обратно. Хранилищем может быть **Neon Postgres** (бесплатный тариф) или **Vercel KV / Upstash Redis**. Клиенты заходят только на ваш `*.vercel.app` — отдельный сервер не нужен.
+**Архитектура.** Всё работает внутри Vercel. Serverless-функция на каждом запросе восстанавливает SQLite-файлы из внешнего хранилища во временную папку `/tmp`, выполняет обычный бэкенд и сохраняет изменения обратно. Хранилищем может быть **Supabase** (бесплатный тариф), **Neon Postgres** или **Vercel KV / Upstash Redis**. Клиенты заходят только на ваш `*.vercel.app` — отдельный сервер не нужен.
 
 ```
 Браузер клиента → Vercel: статика + /api/* и /webhook/vk (serverless)
                        ↓ снимки SQLite
-        Neon Postgres (NEON_DATABASE_URL) или Vercel KV (Upstash)
+   Supabase (SUPABASE_*) / Neon (NEON_DATABASE_URL) / Vercel KV
                        ↓
                  VK API / GigaChat / Telegram
 ```
@@ -260,18 +260,26 @@ git push -u origin main
 
 `.env`, `data/` и ключи в репозиторий не попадают (`.gitignore`). В архиве есть `LICENSE`, `SECURITY.md`, CI и все конфиги deployment.
 
-**2. База (достаточно одного варианта, у обоих есть бесплатный тариф)**
+**2. База (достаточно одного варианта, у всех есть бесплатный тариф)**
 
-*Вариант А — Neon Postgres (бесплатно):*
+*Вариант А — Supabase (рекомендуется):*
+1. Создайте проект на https://supabase.com/dashboard (Free tier).
+2. В **SQL Editor → New query** вставьте содержимое файла `supabase/setup.sql` и нажмите **Run**. Он создаст таблицы `lido_snapshots` и `lido_locks`.
+3. В **Settings → API** скопируйте:
+   - **Project URL** → переменная `SUPABASE_URL` (например `https://abcdefgh.supabase.co`);
+   - **service_role key** → переменная `SUPABASE_SERVICE_KEY` (нажмите «Reveal»; это секрет, никуда его не публикуйте).
+4. Добавьте обе переменные в Vercel → Environment Variables → Production.
+
+*Вариант Б — Neon Postgres:*
 1. Создайте проект и базу в Neon, выберите Free tier.
 2. В **Connection Details** скопируйте Connection String вида `postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`.
-3. Добавьте его в Vercel как переменную `NEON_DATABASE_URL`. Хендлер сам создаст таблицы `lido_snapshots` и `lido_locks` и будет хранить снимки SQLite в Postgres через HTTP SQL API.
+3. Добавьте его в Vercel как переменную `NEON_DATABASE_URL`. Таблицы создадутся автоматически.
 
-*Вариант Б — Vercel KV (Upstash):*
+*Вариант В — Vercel KV (Upstash):*
 1. Vercel → **Storage → Create Database → KV (Upstash)** → создайте и подключите к проекту.
-2. Vercel автоматически добавит `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN` (поддерживаются и алиасы `KV_REST_API_*`).
+2. Vercel автоматически добавит `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN` (поддерживаются алиасы `KV_REST_API_*`).
 
-Если заданы обе переменные, приоритет у `NEON_DATABASE_URL`.
+Если задано несколько вариантов, приоритет: `SUPABASE_*` → `NEON_DATABASE_URL` → Upstash.
 
 **3. Vercel (проект)**
 
