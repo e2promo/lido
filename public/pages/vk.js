@@ -70,12 +70,14 @@ export function render({ state }) {
   <div class="card mt">
     <div class="card-head"><div class="card-title">${icon('send', 15)} Отправить тестовое сообщение в ВК</div><span class="card-sub">Проверьте, что токен действительно работает</span></div>
     <div class="card-pad">
-      <div class="grid g2">
+      <div class="grid g3">
         <div class="field"><label>Диалог</label><select class="select" id="vk-test-dialog">
-          ${(state.dialogs || []).map((d) => `<option value="${esc(d.id)}">${esc(d.client_name)} · ${esc(d.vk_id)}</option>`).join('') || '<option value="">Нет диалогов — сначала напишите клиенту в ВК</option>'}
+          ${(state.dialogs || []).map((d) => `<option value="${esc(d.id)}" data-peer="${esc(d.peer_id)}">${esc(d.client_name)} · ${esc(d.vk_id)}</option>`).join('') || '<option value="">Нет диалогов</option>'}
         </select></div>
+        <div class="field"><label>Peer ID (число)</label><input class="input mono" id="vk-test-peer" value="${esc(state.dialogs?.[0]?.peer_id || '')}" placeholder="123456789 или 2000000001" /></div>
         <div class="field"><label>Текст</label><input class="input" id="vk-test-text" value="Тестовое сообщение от Лидо ✅" /></div>
       </div>
+      <div class="hint mt">Peer ID можно взять из ссылки на диалог ВК; для беседы это 2000000000 + номер беседы. Демо-диалоги с peer_id «demo_user» для отправки не подходят.</div>
       <div class="flex mt" style="justify-content:flex-end"><button class="btn primary" id="vk-send-test">${icon('send', 14)} Отправить</button></div>
       <div id="vk-test-result" class="hint mt"></div>
     </div>
@@ -113,14 +115,22 @@ export function bind(root, { state, refresh }) {
       toast('Проверка соединения выполнена', 'ok');
     } catch (e) { el.textContent = e.message; }
   };
+  const dialogSelect = document.getElementById('vk-test-dialog');
+  const peerInput = document.getElementById('vk-test-peer');
+  dialogSelect.onchange = () => {
+    const option = dialogSelect.selectedOptions[0];
+    if (option?.dataset.peer) peerInput.value = option.dataset.peer;
+  };
+
   document.getElementById('vk-send-test').onclick = async () => {
-    const dialogId = document.getElementById('vk-test-dialog').value;
+    const dialogId = dialogSelect.value;
+    const peerId = peerInput.value.trim();
     const el = document.getElementById('vk-test-result');
-    if (!dialogId) { el.textContent = 'Нет диалога для отправки'; return; }
+    if (!/^-?\d+$/.test(peerId)) { el.textContent = 'Укажите числовой Peer ID'; return; }
     el.textContent = 'Отправляем…';
     try {
       const res = await api('/api/vk/send-test', { method: 'POST', body: {
-        dialogId, text: document.getElementById('vk-test-text').value,
+        dialogId, peerId, text: document.getElementById('vk-test-text').value,
       } });
       el.innerHTML = res.ok
         ? `<span style="color:var(--accent)">✓ ${res.simulated ? 'Сохранено локально (демо-режим: реальный токен не задан)' : `Отправлено в ВК, ID сообщения ${esc(res.messageId || '—')}`}</span>`

@@ -201,14 +201,19 @@ export async function handleApi(req, res, pathname, url) {
   if (pathname === '/api/vk/send-test' && method === 'POST') {
     const body = await readBody(req);
     const dialog = getDialog(String(body.dialogId || ''));
-    if (!dialog) return json(res, 404, { error: 'Диалог не найден' });
+    const peerId = String(body.peerId || dialog?.peer_id || '');
+    if (!dialog && !/^-?\d+$/.test(peerId)) {
+      return json(res, 400, { error: 'Укажите числовой Peer ID или выберите диалог, пришедший из ВКонтакте' });
+    }
     const text = String(body.text || '').trim() || 'Тестовое сообщение от Лидо ✅';
-    const sent = await sendMessage(dialog.peer_id, text);
-    addMessage(dialog.id, 'out', 'Вы', text, now(), { action: 'test' }, {
-      vkMessageId: sent?.messageId || null,
-      delivered: sent?.ok ? 1 : 0,
-      deliveryError: sent?.error || null,
-    });
+    const sent = await sendMessage(peerId, text);
+    if (dialog) {
+      addMessage(dialog.id, 'out', 'Вы', text, now(), { action: 'test' }, {
+        vkMessageId: sent?.messageId || null,
+        delivered: sent?.ok ? 1 : 0,
+        deliveryError: sent?.error || null,
+      });
+    }
     addLog(sent?.ok ? 'info' : 'error',
       sent?.ok ? 'Тестовое сообщение отправлено в ВК' : 'Тестовое сообщение не отправлено: ' + sent?.error,
       { dialogId: dialog.id });

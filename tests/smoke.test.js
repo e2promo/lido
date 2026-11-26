@@ -213,8 +213,13 @@ test('HTTP: тестовая отправка сообщения в ВК', async
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const dialogs = await fetch(`http://127.0.0.1:${PORT}/api/dialogs`, { headers }).then((r) => r.json());
   const target = dialogs[0];
+  const invalid = await fetch(`http://127.0.0.1:${PORT}/api/vk/send-test`, {
+    method: 'POST', headers, body: JSON.stringify({ dialogId: target.id, peerId: 'demo_user', text: 'Тест' }),
+  }).then((r) => r.json());
+  assert.equal(invalid.ok, false);
+  assert.match(invalid.error, /peer_id/i);
   const res = await fetch(`http://127.0.0.1:${PORT}/api/vk/send-test`, {
-    method: 'POST', headers, body: JSON.stringify({ dialogId: target.id, text: 'Тест из Лидо' }),
+    method: 'POST', headers, body: JSON.stringify({ dialogId: target.id, peerId: '123456789', text: 'Тест из Лидо' }),
   }).then((r) => r.json());
   assert.equal(res.ok, true);
   const detail = await fetch(`http://127.0.0.1:${PORT}/api/dialogs/${target.id}`, { headers }).then((r) => r.json());

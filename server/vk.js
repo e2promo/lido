@@ -32,6 +32,9 @@ export async function vkRequest(method, params = {}, token) {
 
 export async function sendMessage(peerId, text) {
   const config = getVkConfig();
+  if (peerId == null || !/^-?\d+$/.test(String(peerId))) {
+    return { ok: false, error: 'Некорректный peer_id: нужен числовой ID пользователя, беседы (2000000000+id) или сообщества (-id)' };
+  }
   if (!config.token) {
     addLog('info', 'Демо-режим: сообщение отправлено в интерфейс (без VK API)', { peerId });
     return { ok: true, simulated: true };
