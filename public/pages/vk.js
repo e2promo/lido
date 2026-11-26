@@ -67,6 +67,20 @@ export function render({ state }) {
     </div></div>
   </div>
 
+  <div class="card mt">
+    <div class="card-head"><div class="card-title">${icon('send', 15)} Отправить тестовое сообщение в ВК</div><span class="card-sub">Проверьте, что токен действительно работает</span></div>
+    <div class="card-pad">
+      <div class="grid g2">
+        <div class="field"><label>Диалог</label><select class="select" id="vk-test-dialog">
+          ${(state.dialogs || []).map((d) => `<option value="${esc(d.id)}">${esc(d.client_name)} · ${esc(d.vk_id)}</option>`).join('') || '<option value="">Нет диалогов — сначала напишите клиенту в ВК</option>'}
+        </select></div>
+        <div class="field"><label>Текст</label><input class="input" id="vk-test-text" value="Тестовое сообщение от Лидо ✅" /></div>
+      </div>
+      <div class="flex mt" style="justify-content:flex-end"><button class="btn primary" id="vk-send-test">${icon('send', 14)} Отправить</button></div>
+      <div id="vk-test-result" class="hint mt"></div>
+    </div>
+  </div>
+
   <div class="grid g2 mt">
     <div class="card">
       <div class="card-head"><div class="card-title">${icon('rocket', 15)} Как подключить за 10 минут</div></div>
@@ -98,6 +112,21 @@ export function bind(root, { state, refresh }) {
         : `<span style="color:var(--danger)">✗ ${esc(res.error || 'Ошибка')}</span>`;
       toast('Проверка соединения выполнена', 'ok');
     } catch (e) { el.textContent = e.message; }
+  };
+  document.getElementById('vk-send-test').onclick = async () => {
+    const dialogId = document.getElementById('vk-test-dialog').value;
+    const el = document.getElementById('vk-test-result');
+    if (!dialogId) { el.textContent = 'Нет диалога для отправки'; return; }
+    el.textContent = 'Отправляем…';
+    try {
+      const res = await api('/api/vk/send-test', { method: 'POST', body: {
+        dialogId, text: document.getElementById('vk-test-text').value,
+      } });
+      el.innerHTML = res.ok
+        ? `<span style="color:var(--accent)">✓ ${res.simulated ? 'Сохранено локально (демо-режим: реальный токен не задан)' : `Отправлено в ВК, ID сообщения ${esc(res.messageId || '—')}`}</span>`
+        : `<span style="color:var(--danger)">✗ ${esc(res.error || 'Не удалось отправить')}</span>`;
+      toast(res.ok ? 'Тестовое сообщение отправлено' : 'Ошибка отправки', res.ok ? 'ok' : 'err');
+    } catch (err) { el.textContent = err.message; }
   };
   document.getElementById('save-vk').onclick = async () => {
     const body = {

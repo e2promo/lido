@@ -209,6 +209,18 @@ test('HTTP: webhook ВК подтверждает секрет и возвращ
   assert.equal(await res.text(), 'ok');
 });
 
+test('HTTP: тестовая отправка сообщения в ВК', async () => {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const dialogs = await fetch(`http://127.0.0.1:${PORT}/api/dialogs`, { headers }).then((r) => r.json());
+  const target = dialogs[0];
+  const res = await fetch(`http://127.0.0.1:${PORT}/api/vk/send-test`, {
+    method: 'POST', headers, body: JSON.stringify({ dialogId: target.id, text: 'Тест из Лидо' }),
+  }).then((r) => r.json());
+  assert.equal(res.ok, true);
+  const detail = await fetch(`http://127.0.0.1:${PORT}/api/dialogs/${target.id}`, { headers }).then((r) => r.json());
+  assert.equal(detail.messages[detail.messages.length - 1].text, 'Тест из Лидо');
+});
+
 test('HTTP: сообщение от имени сообщества дублируется в софт', async () => {
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const payload = {

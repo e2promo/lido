@@ -198,6 +198,29 @@ export async function handleApi(req, res, pathname, url) {
     return json(res, info.ok ? 200 : 502, info);
   }
 
+  if (pathname === '/api/vk/send-test' && method === 'POST') {
+    const body = await readBody(req);
+    const dialog = getDialog(String(body.dialogId || ''));
+    if (!dialog) return json(res, 404, { error: 'Диалог не найден' });
+    const text = String(body.text || '').trim() || 'Тестовое сообщение от Лидо ✅';
+    const sent = await sendMessage(dialog.peer_id, text);
+    addMessage(dialog.id, 'out', 'Вы', text, now(), { action: 'test' }, {
+      vkMessageId: sent?.messageId || null,
+      delivered: sent?.ok ? 1 : 0,
+      deliveryError: sent?.error || null,
+    });
+    addLog(sent?.ok ? 'info' : 'error',
+      sent?.ok ? 'Тестовое сообщение отправлено в ВК' : 'Тестовое сообщение не отправлено: ' + sent?.error,
+      { dialogId: dialog.id });
+    return json(res, sent?.ok ? 200 : 502, {
+      ok: Boolean(sent?.ok),
+      simulated: Boolean(sent?.simulated),
+      error: sent?.error || null,
+      messageId: sent?.messageId || null,
+      text,
+    });
+  }
+
   const importMatch = pathname.match(/^\/api\/vk\/import-history\/([^/]+)$/);
   if (importMatch && method === 'POST') {
     const dialog = getDialog(importMatch[1]);
