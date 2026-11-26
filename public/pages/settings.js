@@ -113,7 +113,7 @@ export function bind(root, { state, refresh, rerender }) {
   });
   document.getElementById('tg-enabled').onclick = (e) => { tgEnabled = !tgEnabled; e.currentTarget.classList.toggle('on', tgEnabled); };
   document.getElementById('comp-consent').onclick = (e) => { consentRequired = !consentRequired; e.currentTarget.classList.toggle('on', consentRequired); };
-  document.getElementById('copy-webhook-url').onclick = () => copyText(`${location.origin}/webhook/vk`);
+  document.getElementById('copy-webhook-url').onclick = () => copyText(`${location.origin}/webhook/vk?org=${encodeURIComponent(state.user?.orgSlug || 'demo')}`);
   document.getElementById('go-economics').onclick = () => { location.hash = '#/economics'; };
   document.getElementById('go-models').onclick = () => { location.hash = '#/models'; };
   document.getElementById('save-org').onclick = async () => {

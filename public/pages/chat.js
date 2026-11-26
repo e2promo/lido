@@ -123,6 +123,29 @@ export function bind(root, ctx) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   };
   bindLeadActions(ctx);
+
+  const timer = setInterval(async () => {
+    if (document.hidden || state.selectedDialogId !== id) return;
+    try {
+      const data = await api(`/api/dialogs/${encodeURIComponent(id)}`);
+      const previousMessages = loadedId === id ? loaded?.messages || [] : [];
+      const previousLastId = previousMessages[previousMessages.length - 1]?.id;
+      const nextLastId = data.messages[data.messages.length - 1]?.id;
+      if (previousLastId === nextLastId) return;
+      loadedId = id;
+      loaded = data;
+      const summary = state.dialogs?.find((d) => d.id === id);
+      if (summary) Object.assign(summary, data.dialog);
+      const msgs = document.getElementById('chat-messages');
+      if (msgs) {
+        const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 100;
+        msgs.innerHTML = messagesHtml(data.messages);
+        if (nearBottom) msgs.scrollTop = msgs.scrollHeight;
+      }
+      if (data.dialog.unread) await api(`/api/dialogs/${id}`, { method: 'PATCH', body: { unread: 0 } });
+    } catch {}
+  }, 5000);
+  return () => clearInterval(timer);
 }
 
 function bindLeadActions(ctx) {

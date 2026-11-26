@@ -9,7 +9,7 @@ export function getVkConfig() {
   return {
     ...stored,
     token: process.env.VK_GROUP_TOKEN || stored.token || '',
-    groupId: process.env.VK_GROUP_ID || '',
+    groupId: process.env.VK_GROUP_ID || stored.groupId || stored.communityId || '',
     secret: process.env.VK_SECRET || stored.secret || '',
     confirmationToken: process.env.VK_CONFIRMATION_TOKEN || stored.confirmationToken || '',
   };
@@ -45,7 +45,7 @@ export async function sendMessage(peerId, text) {
       message: text,
       random_id: Math.floor(Math.random() * 2 ** 31),
       group_id: config.groupId ? Number(config.groupId) : undefined,
-    });
+    }, config.token);
     addLog('success', 'Сообщение отправлено через VK API', { peerId, messageId: result });
     return { ok: true, messageId: result };
   } catch (err) {
@@ -61,7 +61,7 @@ export async function getHistory(peerId, count = 20) {
     peer_id: Number(peerId),
     count: Math.min(100, Math.max(1, count)),
     extended: 0,
-  });
+  }, config.token);
   return (response.items || []).map((item) => ({
     vkMessageId: String(item.id),
     peerId: item.peer_id,
@@ -113,7 +113,7 @@ export async function getCommunityInfo() {
     };
   }
   try {
-    const response = await vkRequest('groups.getById', { group_ids: config.groupId });
+    const response = await vkRequest('groups.getById', { group_ids: config.groupId }, config.token);
     const group = Array.isArray(response) ? response[0] : response;
     if (!group || typeof group !== 'object') {
       throw new Error('ВК не вернул данные сообщества — проверьте ID сообщества и права токена');

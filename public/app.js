@@ -17,6 +17,8 @@ export const state = {
   route: 'dashboard', params: {}, selectedDialogId: null, testHistory: [], logsOpen: false, dialogQuery: '', orgSwitchOpen: false,
 };
 
+let pageCleanup = null;
+
 const PAGES = {
   dashboard: { title: 'Главная', sub: 'Обзор работы ИИ-агента', icon: 'dashboard', module: dashboard, group: 'Рабочее пространство' },
   dialogs: { title: 'Диалоги', sub: 'Все обращения клиентов', icon: 'chat', module: dialogs, group: 'Рабочее пространство' },
@@ -190,6 +192,8 @@ function ctx() {
 }
 
 export async function render() {
+  pageCleanup?.();
+  pageCleanup = null;
   const app = document.getElementById('app');
   if (!getToken()) {
     app.innerHTML = loginPage();
@@ -213,7 +217,8 @@ export async function render() {
   const page = PAGES[state.route];
   try {
     root.innerHTML = page.module.render(ctx());
-    page.module.bind?.(root, ctx());
+    const cleanup = page.module.bind?.(root, ctx());
+    if (typeof cleanup === 'function') pageCleanup = cleanup;
   } catch (err) {
     console.error(err);
     root.innerHTML = `<div class="card card-pad"><h3>Ошибка отображения страницы</h3><p class="text-muted">${esc(err.message)}</p></div>`;

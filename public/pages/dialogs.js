@@ -84,4 +84,9 @@ export function bind(root, ctx) {
     toast(`Ответ агента: ${res.reply.slice(0, 60)}…`, 'ok');
     await ctx.refresh();
   };
+
+  const timer = setInterval(() => {
+    if (!document.hidden) ctx.refresh().catch(() => {});
+  }, 12000);
+  return () => clearInterval(timer);
 }

@@ -107,6 +107,7 @@ export async function handleRequest(req, res) {
     if (pathname === '/webhook/vk' || pathname === '/vk/webhook') {
       const slug = url.searchParams.get('org');
       const org = slug ? masterDb.prepare('SELECT id FROM organizations WHERE slug = ?').get(slug) : null;
+      if (slug && !org) return json(res, 404, { error: 'Компания для webhook не найдена' });
       return await withOrg(org?.id || DEFAULT_ORG_ID, () => handleWebhook(req, res, url));
     }
     if (pathname.startsWith('/api/')) {
