@@ -191,6 +191,15 @@ test('HTTP: клиент сам выбирает модель ИИ для сво
   assert.equal(test.simulated, true);
 });
 
+test('HTTP: webhook ВК возвращает строку подтверждения без проверки секрета', async () => {
+  const res = await fetch(`http://127.0.0.1:${PORT}/webhook/vk`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'confirmation', group_id: 54775709 }),
+  });
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /^[a-z0-9-]+$/i);
+});
+
 test('HTTP: webhook ВК подтверждает секрет и возвращает ok', async () => {
   const res = await fetch(`http://127.0.0.1:${PORT}/webhook/vk`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

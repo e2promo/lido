@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleApi } from './api.js';
-import { parseWebhook, verifySecret, extractIncoming } from './vk.js';
+import { parseWebhook, verifySecret, extractIncoming, getVkConfig } from './vk.js';
 import { ingestIncoming } from './engine.js';
 import { addLog, withOrg, DEFAULT_ORG_ID } from './db.js';
 import { masterDb, findUserByToken } from './master.js';
@@ -60,22 +60,23 @@ function serveStatic(res, pathname) {
 
 async function handleWebhook(req, res, url) {
   if (req.method === 'GET') {
-    const confirmation = process.env.VK_CONFIRMATION_TOKEN || '';
+    const confirmation = process.env.VK_CONFIRMATION_TOKEN || getVkConfig().confirmationToken || 'lido-confirmation-token';
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    return res.end(confirmation || 'lido-confirmation-token');
+    return res.end(confirmation);
   }
   let raw = '';
   for await (const chunk of req) raw += chunk;
   let body;
   try { body = JSON.parse(raw || '{}'); } catch { body = {}; }
   const parsed = parseWebhook(body);
+  if (parsed.type === 'confirmation') {
+    const confirmation = process.env.VK_CONFIRMATION_TOKEN || getVkConfig().confirmationToken || 'lido-confirmation-token';
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    return res.end(confirmation);
+  }
   if (!verifySecret(body)) {
     addLog('warn', 'Webhook ВК отклонён: неверный секрет');
     res.writeHead(403); return res.end('forbidden');
-  }
-  if (parsed.type === 'confirmation') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    return res.end(process.env.VK_CONFIRMATION_TOKEN || 'lido-confirmation-token');
   }
   if (parsed.type === 'message_new') {
     const incoming = extractIncoming(parsed.object);
