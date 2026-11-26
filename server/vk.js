@@ -110,9 +110,18 @@ export async function getCommunityInfo() {
     };
   }
   try {
-    const groups = await vkRequest('groups.getById', { group_ids: config.groupId });
-    const group = groups[0];
-    return { ok: true, name: group.name, id: String(group.id), members: 0, status: 'ok' };
+    const response = await vkRequest('groups.getById', { group_ids: config.groupId });
+    const group = Array.isArray(response) ? response[0] : response;
+    if (!group || typeof group !== 'object') {
+      throw new Error('ВК не вернул данные сообщества — проверьте ID сообщества и права токена');
+    }
+    return {
+      ok: true,
+      name: group.name || config.communityName || 'Сообщество',
+      id: String(group.id || config.groupId),
+      members: Number(group.members_count || 0),
+      status: 'ok',
+    };
   } catch (err) {
     return { ok: false, error: err.message };
   }
