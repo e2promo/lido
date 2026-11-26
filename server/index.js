@@ -7,7 +7,7 @@ import { parseWebhook, verifySecret, extractIncoming, getVkConfig } from './vk.j
 import { ingestIncoming, ingestOutgoing } from './engine.js';
 import { addLog, withOrg, DEFAULT_ORG_ID } from './db.js';
 import { masterDb, findUserByToken } from './master.js';
-import { json } from './util.js';
+import { json, readBody } from './util.js';
 
 function loadEnv() {
   const envPath = path.join(process.cwd(), '.env');
@@ -64,10 +64,8 @@ async function handleWebhook(req, res, url) {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end(confirmation);
   }
-  let raw = '';
-  for await (const chunk of req) raw += chunk;
   let body;
-  try { body = JSON.parse(raw || '{}'); } catch { body = {}; }
+  try { body = await readBody(req); } catch { body = {}; }
   const parsed = parseWebhook(body);
   if (parsed.type === 'confirmation') {
     const confirmation = process.env.VK_CONFIRMATION_TOKEN || getVkConfig().confirmationToken || 'lido-confirmation-token';

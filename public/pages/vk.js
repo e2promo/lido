@@ -1,5 +1,14 @@
 import { icon, esc, api, toast, copyText, timeAgo } from '../lib.js';
 
+function friendlyVkError(error) {
+  const text = String(error || '');
+  if (text.includes('901')) return '901 — пользователь не разрешил сообщения от сообщества. Пусть первым напишет в сообщество или нажмёт «Разрешить сообщения» в диалоге с сообществом.';
+  if (text.includes('1116')) return '1116 — неверный токен сообщества. Создайте новый ключ с правом «Сообщения сообщества» и вставьте его выше.';
+  if (/peer_id|VK API 100/.test(text)) return '100 — некорректный Peer ID. Укажите числовой ID пользователя, беседы (2000000000+id) или сообщества (-id).';
+  if (text.includes('403')) return '403 — проверьте секретный ключ Callback API.';
+  return text;
+}
+
 export function render({ state }) {
   const vk = state.settings.vk || {};
   const connected = vk.connected !== false;
@@ -111,7 +120,7 @@ export function bind(root, { state, refresh }) {
       const res = await api('/api/vk/test', { method: 'POST', body: {} });
       el.innerHTML = res.ok
         ? `<span style="color:var(--accent)">✓ Соединение установлено: ${res.simulated ? 'демо-режим (реальный токен не задан)' : esc(res.name || '')}</span>`
-        : `<span style="color:var(--danger)">✗ ${esc(res.error || 'Ошибка')}</span>`;
+        : `<span style="color:var(--danger)">✗ ${esc(friendlyVkError(res.error || 'Ошибка'))}</span>`;
       toast('Проверка соединения выполнена', 'ok');
     } catch (e) { el.textContent = e.message; }
   };
