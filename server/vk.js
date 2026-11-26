@@ -89,6 +89,7 @@ export function extractIncoming(object) {
     peerId: message.peer_id || from,
     userId: from,
     vkMessageId: message.id != null ? String(message.id) : null,
+    out: Boolean(message.out),
     text: message.text || '',
     date: message.date ? new Date(message.date * 1000).toISOString() : new Date().toISOString(),
     firstName: object.client_info?.first_name || '',

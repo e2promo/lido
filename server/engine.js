@@ -180,6 +180,30 @@ export async function importHistoryForDialog(dialog, count = 20) {
   }
 }
 
+export async function ingestOutgoing(payload) {
+  if (payload.vkMessageId && hasVkMessage(payload.vkMessageId)) {
+    return { duplicate: true, dialog: db.prepare('SELECT * FROM dialogs WHERE peer_id = ?').get(String(payload.peerId)) };
+  }
+  const peerId = String(payload.peerId || payload.userId || 'unknown');
+  let dialog = db.prepare('SELECT * FROM dialogs WHERE peer_id = ?').get(peerId);
+  if (!dialog) {
+    const name = [payload.firstName, payload.lastName].filter(Boolean).join(' ') || `Клиент ${String(peerId).slice(-4)}`;
+    dialog = createDialog({
+      id: uid('d_'), peer_id: peerId,
+      vk_id: payload.userId ? `id${payload.userId}` : peerId,
+      client_name: name,
+      profile_url: payload.userId ? `https://vk.com/id${payload.userId}` : '#',
+      status: 'in_progress',
+      created_at: payload.date || now(), last_message_at: payload.date || now(),
+    });
+  }
+  addMessage(dialog.id, 'out', payload.author || 'Сообщество', payload.text, payload.date || now(),
+    { action: 'vk_out' }, { vkMessageId: payload.vkMessageId || null, delivered: true });
+  updateDialog(dialog.id, { unread: 0, status: dialog.status === 'new' ? 'in_progress' : dialog.status });
+  addLog('info', 'Сообщение от имени сообщества сохранено в переписке', { dialogId: dialog.id });
+  return { dialog: getDialog(dialog.id) };
+}
+
 export async function simulateReply({ history, incoming }) {
   const classification = {
     phone: extractPhone(incoming),

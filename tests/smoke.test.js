@@ -209,6 +209,23 @@ test('HTTP: webhook ВК подтверждает секрет и возвращ
   assert.equal(await res.text(), 'ok');
 });
 
+test('HTTP: сообщение от имени сообщества дублируется в софт', async () => {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const payload = {
+    type: 'message_reply', secret: 'lido_demo_secret',
+    object: { message: { id: 654321, peer_id: 777001, from_id: -54775709, out: 1, text: 'Здравствуйте! Мы на связи.' } },
+  };
+  await fetch(`http://127.0.0.1:${PORT}/webhook/vk`, { method: 'POST', headers, body: JSON.stringify(payload) });
+  await fetch(`http://127.0.0.1:${PORT}/webhook/vk`, { method: 'POST', headers, body: JSON.stringify(payload) });
+  const dialogs = await fetch(`http://127.0.0.1:${PORT}/api/dialogs`, { headers }).then((r) => r.json());
+  const dialog = dialogs.find((d) => d.peer_id === '777001');
+  assert.ok(dialog, 'диалог создан');
+  const detail = await fetch(`http://127.0.0.1:${PORT}/api/dialogs/${dialog.id}`, { headers }).then((r) => r.json());
+  assert.equal(detail.messages.length, 1, 'сообщение не дублируется');
+  assert.equal(detail.messages[0].direction, 'out');
+  assert.equal(detail.messages[0].author, 'Сообщество');
+});
+
 test('HTTP: синхронизация ВК — incoming, ответ и защита от дублей', async () => {
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const payload = {

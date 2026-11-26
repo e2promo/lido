@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleApi } from './api.js';
 import { parseWebhook, verifySecret, extractIncoming, getVkConfig } from './vk.js';
-import { ingestIncoming } from './engine.js';
+import { ingestIncoming, ingestOutgoing } from './engine.js';
 import { addLog, withOrg, DEFAULT_ORG_ID } from './db.js';
 import { masterDb, findUserByToken } from './master.js';
 import { json } from './util.js';
@@ -85,6 +85,16 @@ async function handleWebhook(req, res, url) {
         await ingestIncoming(incoming, { sendToVk: true });
       } catch (err) {
         addLog('error', 'Ошибка обработки сообщения ВК: ' + err.message);
+      }
+    }
+  }
+  if (parsed.type === 'message_reply' || parsed.type === 'message_edit') {
+    const outgoing = extractIncoming(parsed.object);
+    if (outgoing.text) {
+      try {
+        await ingestOutgoing({ ...outgoing, author: 'Сообщество' });
+      } catch (err) {
+        addLog('error', 'Ошибка сохранения исходящего сообщения ВК: ' + err.message);
       }
     }
   }
