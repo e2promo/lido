@@ -3,6 +3,7 @@ import { icon, esc, api, toast, copyText, timeAgo } from '../lib.js';
 export function render({ state }) {
   const vk = state.settings.vk || {};
   const connected = vk.connected !== false;
+  const webhookUrl = `${location.origin}/webhook/vk?org=${encodeURIComponent(state.user?.orgSlug || 'demo')}`;
   const steps = [
     { n: 1, title: 'Создайте сообщество', text: 'Если его ещё нет — создайте группу ВКонтакте для вашего бизнеса.', done: true },
     { n: 2, title: 'Выдайте права администратора', text: 'В разделе «Управление» → «Администраторы» добавьте аккаунт, от которого будет работать токен.', done: true },
@@ -39,8 +40,8 @@ export function render({ state }) {
           <div class="field"><label>Строка подтверждения</label><input class="input mono" id="vk-confirm" value="${esc(vk.confirmationToken || '')}" placeholder="Укажите при настройке Callback API" /></div>
         </div>
         <div class="field mt"><label>Адрес для Callback API ВКонтакте</label>
-          <div class="flex"><input class="input mono" id="vk-webhook" readonly value="${location.origin}/webhook/vk" /><button class="btn" id="copy-webhook">${icon('copy', 14)}</button></div>
-          <span class="hint">Вставьте этот адрес в разделе «Работа с API» → «Callback API» сообщества.</span></div>
+          <div class="flex"><input class="input mono" id="vk-webhook" readonly value="${esc(webhookUrl)}" /><button class="btn" id="copy-webhook">${icon('copy', 14)}</button></div>
+          <span class="hint">Вставьте этот адрес в раздел «Работа с API» → «Callback API» сообщества. Параметр org=<slug> направляет сообщения в текущую компанию; для демо-компании используйте адрес без параметра.</span></div>
       </div>
     </div>
 
@@ -85,7 +86,7 @@ export function render({ state }) {
 }
 
 export function bind(root, { state, refresh }) {
-  document.getElementById('copy-webhook').onclick = () => copyText(`${location.origin}/webhook/vk`);
+  document.getElementById('copy-webhook').onclick = () => copyText(document.getElementById('vk-webhook').value);
   document.getElementById('test-vk').onclick = async () => {
     const el = document.getElementById('vk-result');
     el.textContent = 'Проверяем соединение…';

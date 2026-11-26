@@ -44,7 +44,7 @@ function authorize(req) {
   const user = findUserByToken(bearer);
   if (!user) return null;
   const org = getOrganization(user.org_id);
-  return { id: user.id, name: user.name, email: user.email, orgId: user.org_id, orgName: org?.name || '', industry: org?.industry || 'universal' };
+  return { id: user.id, name: user.name, email: user.email, orgId: user.org_id, orgName: org?.name || '', orgSlug: org?.slug || 'demo', industry: org?.industry || 'universal' };
 }
 
 export async function handleApi(req, res, pathname, url) {
@@ -60,7 +60,7 @@ export async function handleApi(req, res, pathname, url) {
     const org = getOrganization(user.org_id);
     return json(res, 200, {
       token: t,
-      user: { id: user.id, name: user.name, email: user.email, orgId: user.org_id, orgName: org?.name || '', industry: org?.industry || 'universal' },
+      user: { id: user.id, name: user.name, email: user.email, orgId: user.org_id, orgName: org?.name || '', orgSlug: org?.slug || 'demo', industry: org?.industry || 'universal' },
     });
   }
 
@@ -78,7 +78,7 @@ export async function handleApi(req, res, pathname, url) {
     const t = createSession(newUser.id);
     return json(res, 201, {
       token: t,
-      user: { id: newUser.id, name: newUser.name, email: newUser.email, orgId: org.id, orgName: org.name, industry },
+      user: { id: newUser.id, name: newUser.name, email: newUser.email, orgId: org.id, orgName: org.name, orgSlug: org.slug, industry },
     });
   }
 
